@@ -13,24 +13,24 @@ namespace Summoner.Notifications
     {
         private const string NotificationName = "MESSAGE";
 
-        private Dictionary<string, string> configuration;
+        private ConfigurationDictionary configuration;
 
         private readonly GrowlConnector growlConnector;
 
-        public GrowlNotification(Dictionary<string, string> configuration)
+        public GrowlNotification(ConfigurationDictionary configuration)
         {
             this.configuration = configuration;
 
             growlConnector = new GrowlConnector();
 
-            Application growlApplication = new Application(SummonerConstants.ApplicationName);
+            Application growlApplication = new Application(Constants.ApplicationName);
 
             growlConnector.Register(growlApplication, new NotificationType[] {
                 new NotificationType(NotificationName, "Incoming Message")
             });
         }
 
-        public Dictionary<string, string> Configuration
+        public ConfigurationDictionary Configuration
         {
             get
             {
@@ -41,7 +41,7 @@ namespace Summoner.Notifications
         public void Notify(Client client, Message message)
         {
             growlConnector.Notify(new Growl.Connector.Notification(
-                SummonerConstants.ApplicationName,
+                Constants.ApplicationName,
                 NotificationName,
                 "",
                 String.Format("Notification in {0}", client.Name),

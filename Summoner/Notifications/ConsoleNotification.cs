@@ -9,14 +9,14 @@ namespace Summoner.Notifications
 {
     public class ConsoleNotification : Notification
     {
-        private readonly Dictionary<string, string> configuration;
+        private readonly ConfigurationDictionary configuration;
 
-        public ConsoleNotification(Dictionary<string, string> configuration)
+        public ConsoleNotification(ConfigurationDictionary configuration)
         {
             this.configuration = configuration;
         }
 
-        public Dictionary<string, string> Configuration
+        public ConfigurationDictionary Configuration
         {
             get
             {

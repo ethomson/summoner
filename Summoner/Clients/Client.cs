@@ -8,7 +8,7 @@ namespace Summoner.Clients
 {
     public interface Client
     {
-        Dictionary<string, string> Configuration { get; }
+        ConfigurationDictionary Configuration { get; }
         bool Connected { get; }
         string Name { get; }
         void Connect();

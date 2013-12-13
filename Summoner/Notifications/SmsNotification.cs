@@ -11,14 +11,14 @@ namespace Summoner.Notifications
 {
     public class SmsNotification : Notification
     {
-        private readonly Dictionary<string, string> configuration;
+        private readonly ConfigurationDictionary configuration;
 
         private BandwidthRestClient restClient;
         private string bandwidthUserId;
         private string fromNumber;
         private string toNumber;
 
-        public SmsNotification(Dictionary<string, string> configuration)
+        public SmsNotification(ConfigurationDictionary configuration)
         {
             this.configuration = configuration;
 
@@ -34,7 +34,7 @@ namespace Summoner.Notifications
             restClient = new BandwidthRestClient(restClientConfig);
         }
 
-        public Dictionary<string, string> Configuration
+        public ConfigurationDictionary Configuration
         {
             get
             {

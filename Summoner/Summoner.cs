@@ -59,7 +59,7 @@ namespace Summoner
             List<Client> clients = new List<Client>();
             List<Notification> notifications = new List<Notification>();
 
-            foreach (Dictionary<string, string> clientConfig in Configuration.Clients)
+            foreach (ConfigurationDictionary clientConfig in Configuration.Clients)
             {
                 try
                 {
@@ -74,7 +74,7 @@ namespace Summoner
                 }
             }
 
-            foreach (Dictionary<string, string> notificationConfig in Configuration.Notifications)
+            foreach (ConfigurationDictionary notificationConfig in Configuration.Notifications)
             {
                 try
                 {

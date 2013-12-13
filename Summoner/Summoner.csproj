@@ -27,6 +27,7 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetPlatformVersion>8.0</TargetPlatformVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -67,6 +68,8 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.Runtime.InteropServices.WindowsRuntime" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -77,8 +80,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration.cs" />
+    <Compile Include="ConfigurationDictionary.cs" />
     <Compile Include="Notifications\GrowlNotification.cs" />
-    <Compile Include="SummonerConstants.cs" />
+    <Compile Include="Notifications\MetroNotification.cs" />
+    <Compile Include="Constants.cs" />
     <Compile Include="Util\Assert.cs" />
     <Compile Include="Clients\CampfireClient.cs" />
     <Compile Include="Clients\ClientFactory.cs" />
@@ -104,6 +109,7 @@
     <Compile Include="Rest\Tfs\TfsUserProfileRestClient.cs" />
     <Compile Include="Rest\SummonerRestClient.cs" />
     <Compile Include="Rest\SummonerRestClientConfiguration.cs" />
+    <Compile Include="Util\ShellLink.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

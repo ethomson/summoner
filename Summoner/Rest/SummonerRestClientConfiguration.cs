@@ -10,7 +10,7 @@ namespace Summoner.Rest
     {
         public SummonerRestClientConfiguration()
         {
-            UserAgent = SummonerConstants.ApplicationName + " (" + SummonerConstants.InformationUrl + ")";
+            UserAgent = Constants.ApplicationName + " (" + Constants.InformationUrl + ")";
         }
 
         public string UserAgent { get; set; }

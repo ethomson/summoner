@@ -9,7 +9,7 @@ namespace Summoner.Clients
 {
     public class ClientFactory
     {
-        public static Client NewClient(Dictionary<string, string> configuration)
+        public static Client NewClient(ConfigurationDictionary configuration)
         {
             Assert.NotNull(configuration, "configuration");
 

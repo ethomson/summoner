@@ -11,7 +11,7 @@ namespace Summoner.Clients
 {
     public class CampfireClient : Client
     {
-        private readonly Dictionary<string, string> configuration;
+        private readonly ConfigurationDictionary configuration;
 
         private readonly SummonerRestClientConfiguration restConfiguration = new SummonerRestClientConfiguration();
         private string roomName;
@@ -22,7 +22,7 @@ namespace Summoner.Clients
 
         private Dictionary<int, string> userNames = new Dictionary<int, string>();
 
-        public CampfireClient(Dictionary<string, string> configuration)
+        public CampfireClient(ConfigurationDictionary configuration)
         {
             if (configuration == null || !configuration.ContainsKey("uri"))
             {
@@ -37,7 +37,7 @@ namespace Summoner.Clients
             roomName = configuration["room"];
         }
 
-        public Dictionary<string, string> Configuration
+        public ConfigurationDictionary Configuration
         {
             get
             {

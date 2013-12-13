@@ -9,7 +9,7 @@ namespace Summoner.Notifications
 {
     public interface Notification
     {
-        Dictionary<string, string> Configuration { get; }
+        ConfigurationDictionary Configuration { get; }
         void Notify(Client client, Message message);
     }
 }

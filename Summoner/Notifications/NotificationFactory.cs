@@ -9,7 +9,7 @@ namespace Summoner.Notifications
 {
     public class NotificationFactory
     {
-        public static Notification NewNotification(Dictionary<string, string> configuration)
+        public static Notification NewNotification(ConfigurationDictionary configuration)
         {
             Assert.NotNull(configuration, "configuration");
 
@@ -24,6 +24,10 @@ namespace Summoner.Notifications
             else if (configuration["type"].Equals("sms"))
             {
                 return new SmsNotification(configuration);
+            }
+            else if (configuration["type"].Equals("metro"))
+            {
+                return new MetroNotification(configuration);
             }
 
             throw new UnknownNotificationTypeException(

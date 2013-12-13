@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace Summoner
 {
-    public class SummonerConstants
+    public class Constants
     {
         public const string ApplicationName = "Summoner";
         public const string InformationUrl = "http://github.com/ethomson/summoner";
+        public const string ApplicationId = "edwardThomson.Summoner";
 
-        private SummonerConstants()
+        private Constants()
         {
         }
     }

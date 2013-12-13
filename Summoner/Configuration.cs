@@ -17,13 +17,13 @@ namespace Summoner
             set;
         }
 
-        public IEnumerable<Dictionary<string, string>> Clients
+        public IEnumerable<ConfigurationDictionary> Clients
         {
             get;
             set;
         }
 
-        public IEnumerable<Dictionary<string, string>> Notifications
+        public IEnumerable<ConfigurationDictionary> Notifications
         {
             get;
             set;
@@ -62,11 +62,11 @@ namespace Summoner
 
         private static IEnumerable<Dictionary<string, string>> LoadDynamic(dynamic input)
         {
-            List<Dictionary<string, string>> result = new List<Dictionary<string, string>>();
+            List<ConfigurationDictionary> result = new List<ConfigurationDictionary>();
 
             foreach (dynamic json in input)
             {
-                Dictionary<string, string> o = new Dictionary<string, string>();
+                ConfigurationDictionary o = new ConfigurationDictionary();
 
                 foreach (KeyValuePair<string, dynamic> prop in json)
                 {
