@@ -24,11 +24,13 @@ namespace Summoner
                 throw new Exception(String.Format("Invalid argument: {0}", arg));
             }
 
-            Configuration config = (configPath != null) ?
-                Configuration.Load(configPath) : Configuration.Load();
+            Configuration config = new Configuration(
+                (configPath != null) ? configPath : Configuration.DefaultConfigurationPath);
+
             Summoner summoner = new Summoner(config);
 
             summoner.Start();
+            summoner.Stop();
 
             return 0;
         }

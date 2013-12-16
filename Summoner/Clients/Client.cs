@@ -9,10 +9,10 @@ namespace Summoner.Clients
     public interface Client
     {
         ConfigurationDictionary Configuration { get; }
-        bool Connected { get; }
+        bool Running { get; }
         string Name { get; }
-        void Connect();
+        void Start();
         IEnumerable<Message> RecentMessages();
-        void Close();
+        void Stop();
     }
 }

@@ -64,7 +64,7 @@ namespace Summoner
                 try
                 {
                     Client client = ClientFactory.NewClient(clientConfig);
-                    client.Connect();
+                    client.Start();
                     clients.Add(client);
                 }
                 catch (UnknownClientTypeException e)
@@ -140,6 +140,11 @@ namespace Summoner
                 Thread.Sleep(Configuration.PollInterval * 1000);
             }
 
+            foreach(Client client in clients)
+            {
+                client.Stop();
+            }
+
             lock (runningLock)
             {
                 running = false;
@@ -149,7 +154,10 @@ namespace Summoner
 
         public void Stop()
         {
-            running = false;
+            lock (runningLock)
+            {
+                running = false;
+            }
         }
     }
 }

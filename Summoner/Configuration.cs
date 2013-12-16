@@ -11,6 +11,23 @@ namespace Summoner
 {
     public class Configuration
     {
+        public Configuration(string path)
+        {
+            string configString = System.IO.File.ReadAllText(path);
+            dynamic configJson = SimpleJson.DeserializeObject(configString);
+
+            PollInterval = (int)configJson["poll_interval"];
+            ImageCacheDir = DefaultImageCacheDir;
+            Clients = LoadDynamic(configJson["clients"]);
+            Notifications = LoadDynamic(configJson["notifications"]);
+        }
+
+        public string ImageCacheDir
+        {
+            get;
+            set;
+        }
+
         public int PollInterval
         {
             get;
@@ -29,44 +46,43 @@ namespace Summoner
             set;
         }
 
-        public static Configuration Load()
+        public static string DefaultConfigurationPath
         {
-            string exe = System.Reflection.Assembly.GetEntryAssembly().Location;
-            string configpath;
-
-            if (exe.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase))
+            get
             {
-                configpath = exe.Substring(0, exe.Length - 4) + ".config";
-            }
-            else
-            {
-                configpath = exe + ".config";
-            }
+                string exe = System.Reflection.Assembly.GetEntryAssembly().Location;
+                string configpath;
 
-            return Load(configpath);
+                if (exe.EndsWith(".exe", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    configpath = exe.Substring(0, exe.Length - 4) + ".config";
+                }
+                else
+                {
+                    configpath = exe + ".config";
+                }
+
+                return configpath;
+            }
         }
 
-        public static Configuration Load(string path)
+        private static string DefaultImageCacheDir
         {
-            string configString = System.IO.File.ReadAllText(path);
-            dynamic configJson = SimpleJson.DeserializeObject(configString);
-
-            Configuration config = new Configuration();
-
-            config.PollInterval = (int)configJson["poll_interval"];
-            config.Clients = LoadDynamic(configJson["clients"]);
-            config.Notifications = LoadDynamic(configJson["notifications"]);
-
-            return config;
+            get
+            {
+                return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    Path.Combine(Constants.ApplicationName, "Images"));
+            }
         }
 
-        private static IEnumerable<Dictionary<string, string>> LoadDynamic(dynamic input)
+        private IEnumerable<Dictionary<string, string>> LoadDynamic(dynamic input)
         {
             List<ConfigurationDictionary> result = new List<ConfigurationDictionary>();
 
             foreach (dynamic json in input)
             {
-                ConfigurationDictionary o = new ConfigurationDictionary();
+                ConfigurationDictionary o = new ConfigurationDictionary(this);
 
                 foreach (KeyValuePair<string, dynamic> prop in json)
                 {

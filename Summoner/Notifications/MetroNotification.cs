@@ -4,8 +4,11 @@ using System.Linq;
 using System.Runtime;
 using System.Text;
 using System.IO;
+using System.Drawing;
+
 using Windows.UI.Notifications;
 using Windows.Data.Xml.Dom;
+
 using Summoner;
 using Summoner.Clients;
 using Summoner.Util;
@@ -36,8 +39,6 @@ namespace Summoner.Notifications
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 Constants.ApplicationName);
 
-            Console.WriteLine(defaultPath);
-
             if (File.Exists(defaultPath))
             {
                 return;
@@ -55,6 +56,26 @@ namespace Summoner.Notifications
             }
         }
 
+        private string GetDefaultSenderImage()
+        {
+            string filename = Path.Combine(Configuration.Global.ImageCacheDir, "default.gif");
+
+            if (!File.Exists(filename))
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(filename));
+                    Resources.Instance.ExtractResourceToFile("PersonPlaceholder", filename);
+                }
+                catch(Exception)
+                {
+                    // TODO: log...
+                }
+            }
+
+            return filename;
+        }
+
         public void Notify(Client client, Message message)
         {
             ToastTemplateType toastTemplate = ToastTemplateType.ToastImageAndText02;
@@ -66,16 +87,16 @@ namespace Summoner.Notifications
 
             XmlNodeList toastImageAttributes = toastXml.GetElementsByTagName("image");
 
-            /*
-             * Unfortunately, toast notifications do not seem to honor http
-             * or http urls.  We should kick off a background thread to
-             * download these and cache them locally.
-             * 
-             * (This is not so bad, since we may be required to authenticate
-             * anyway.)
-             */
-            //((XmlElement)toastImageAttributes[0]).SetAttribute("src", "file:///c:/temp/image.jpg");
-            //((XmlElement)toastImageAttributes[0]).SetAttribute("alt", message.Sender);
+            if (message.SenderImage != null && File.Exists(message.SenderImage))
+            {
+                ((XmlElement)toastImageAttributes[0]).SetAttribute("src", message.SenderImage);
+            }
+            else
+            {
+                ((XmlElement)toastImageAttributes[0]).SetAttribute("src", GetDefaultSenderImage());
+            }
+
+            ((XmlElement)toastImageAttributes[0]).SetAttribute("alt", message.Sender);
 
             IXmlNode toastNode = toastXml.SelectSingleNode("/toast");
 

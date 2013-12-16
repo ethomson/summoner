@@ -68,6 +68,7 @@
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime" />
     <Reference Include="System.Runtime.InteropServices.WindowsRuntime" />
     <Reference Include="System.Web.Extensions" />
@@ -84,6 +85,12 @@
     <Compile Include="Notifications\GrowlNotification.cs" />
     <Compile Include="Notifications\MetroNotification.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="Clients\ImageManager.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Util\Assert.cs" />
     <Compile Include="Clients\CampfireClient.cs" />
     <Compile Include="Clients\ClientFactory.cs" />
@@ -109,7 +116,9 @@
     <Compile Include="Rest\Tfs\TfsUserProfileRestClient.cs" />
     <Compile Include="Rest\SummonerRestClient.cs" />
     <Compile Include="Rest\SummonerRestClientConfiguration.cs" />
+    <Compile Include="Util\Resources.cs" />
     <Compile Include="Util\ShellLink.cs" />
+    <Compile Include="Util\StringUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -131,6 +140,15 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PersonPlaceholder.gif" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+
 using Summoner.Rest;
 using Summoner.Rest.Campfire;
 using Summoner.Util;
@@ -14,13 +17,18 @@ namespace Summoner.Clients
         private readonly ConfigurationDictionary configuration;
 
         private readonly SummonerRestClientConfiguration restConfiguration = new SummonerRestClientConfiguration();
-        private string roomName;
+        private readonly string roomName;
+
+        private readonly ImageManager imageManager;
+
+        private readonly Object runningLock = new Object();
+        private bool running;
 
         private CampfireRestClient restClient;
         private CampfireRoom room;
         private int? hwm = null;
 
-        private Dictionary<int, string> userNames = new Dictionary<int, string>();
+        private readonly Dictionary<int, CampfireUser> users = new Dictionary<int, CampfireUser>();
 
         public CampfireClient(ConfigurationDictionary configuration)
         {
@@ -35,6 +43,8 @@ namespace Summoner.Clients
             restConfiguration.Username = configuration["api-token"];
             restConfiguration.Password = "X";
             roomName = configuration["room"];
+
+            imageManager = new ImageManager(this);
         }
 
         public ConfigurationDictionary Configuration
@@ -45,10 +55,15 @@ namespace Summoner.Clients
             }
         }
 
-        public bool Connected
+        public bool Running
         {
-            get;
-            private set;
+            get
+            {
+                lock (runningLock)
+                {
+                    return running;
+                }
+            }
         }
 
         public string Name
@@ -69,103 +84,147 @@ namespace Summoner.Clients
             }
         }
 
-        public void Connect()
+        public void Start()
         {
-            if (Connected)
+            lock (runningLock)
             {
-                Close();
-            }
-
-            restClient = new CampfireRestClient(restConfiguration);
-            room = null;
-
-            foreach (CampfireRoom r in restClient.Rooms())
-            {
-                if (roomName.Equals(r.Name))
+                if (running)
                 {
-                    room = r;
-                    break;
+                    Stop();
                 }
+
+                restClient = new CampfireRestClient(restConfiguration);
+                room = null;
+
+                foreach (CampfireRoom r in restClient.Rooms())
+                {
+                    if (roomName.Equals(r.Name))
+                    {
+                        room = r;
+                        break;
+                    }
+                }
+
+                if (room == null)
+                {
+                    throw new Exception(String.Format("Could not find room '{0}'", roomName));
+                }
+
+                CampfireMessage lastMessage = restClient.Messages(room).Last();
+
+                if (lastMessage != null)
+                {
+                    hwm = lastMessage.Id;
+                }
+
+                running = true;
             }
 
-            if (room == null)
+            new Thread(delegate()
             {
-                throw new Exception(String.Format("Could not find room '{0}'", roomName));
-            }
+                imageManager.Start();
+            }).Start();
+        }
 
-            CampfireMessage lastMessage = restClient.Messages(room).Last();
-
-            if (lastMessage != null)
+        private CampfireUser GetUser(int userId)
+        {
+            lock (users)
             {
-                hwm = lastMessage.Id;
-            }
+                if (!users.ContainsKey(userId))
+                {
+                    CampfireUser user = restClient.User(userId);
 
-            Connected = true;
+                    if (user != null)
+                    {
+                        users[userId] = user;
+                    }
+                    else
+                    {
+                        users[userId] = new CampfireUser();
+                        users[userId].Name = "Unknown user " + userId.ToString();
+                    }
+                }
+
+                return users[userId];
+            }
         }
 
         private string ResolveUserId(int userId)
         {
-            if (!userNames.ContainsKey(userId))
-            {
-                CampfireUser user = restClient.User(userId);
+            return GetUser(userId).Name;
+        }
 
-                if (user != null)
-                {
-                    userNames[userId] = user.Name;
-                }
-                else
-                {
-                    userNames[userId] = "Unknown user " + userId.ToString();
-                }
+        private string ResolveUserImage(int userId)
+        {
+            string email = GetUser(userId).EmailAddress;
+
+            if (email == null)
+            {
+                return null;
             }
 
-            return userNames[userId];
+            byte[] emailHash = new MD5CryptoServiceProvider().ComputeHash(
+                Encoding.UTF8.GetBytes(email.Trim().ToLower()));
+
+            string imageUrl = String.Format("http://www.gravatar.com/avatar/{0}",
+                StringUtil.HexString(emailHash));
+
+            return imageManager.GetImage(imageUrl);
+
         }
 
         public IEnumerable<Message> RecentMessages()
         {
-            if (!Connected)
+            lock (runningLock)
             {
-                throw new Exception("Not connected");
-            }
-
-            CampfireRestClient.CampfireMessageOptions messageOptions =
-                (hwm != null) ?
-                new CampfireRestClient.CampfireMessageOptions() { SinceMessageId = hwm } :
-                null;
-
-            IEnumerable<CampfireMessage> campfireMessages = restClient.Messages(room, messageOptions);
-            List<Message> messages = new List<Message>();
-
-            foreach (CampfireMessage campfireMessage in campfireMessages)
-            {
-                hwm = campfireMessage.Id;
-
-                if (!campfireMessage.Type.Equals("TextMessage"))
+                if (!running)
                 {
-                    continue;
+                    throw new Exception("Not connected");
                 }
 
-                int userId = campfireMessage.UserId;
+                CampfireRestClient.CampfireMessageOptions messageOptions =
+                    (hwm != null) ?
+                    new CampfireRestClient.CampfireMessageOptions() { SinceMessageId = hwm } :
+                    null;
 
-                messages.Add(new Message()
+                IEnumerable<CampfireMessage> campfireMessages = restClient.Messages(room, messageOptions);
+                List<Message> messages = new List<Message>();
+
+                foreach (CampfireMessage campfireMessage in campfireMessages)
                 {
-                    Sender = ResolveUserId(campfireMessage.UserId),
-                    Time = campfireMessage.CreatedAt,
-                    Content = campfireMessage.Body
-                });
-            }
+                    hwm = campfireMessage.Id;
 
-            return messages;
+                    if (!campfireMessage.Type.Equals("TextMessage"))
+                    {
+                        continue;
+                    }
+
+                    int userId = campfireMessage.UserId;
+
+                    messages.Add(new Message()
+                    {
+                        Sender = ResolveUserId(campfireMessage.UserId),
+                        SenderImage = ResolveUserImage(campfireMessage.UserId),
+                        Time = campfireMessage.CreatedAt,
+                        Content = campfireMessage.Body
+                    });
+                }
+
+                return messages;
+            }
         }
 
-        public void Close()
+        public void Stop()
         {
-            restClient = null;
-            room = null;
-            userNames.Clear();
+            lock (runningLock)
+            {
+                restClient = null;
+                room = null;
 
-            Connected = false;
+                running = false;
+            }
+
+            imageManager.Stop();
         }
     }
 }

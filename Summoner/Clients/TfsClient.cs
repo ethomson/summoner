@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
+
 using Summoner.Rest;
 using Summoner.Rest.Tfs;
 using Summoner.Util;
@@ -14,14 +17,19 @@ namespace Summoner.Clients
         private readonly ConfigurationDictionary configuration;
 
         private readonly SummonerRestClientConfiguration restConfiguration = new SummonerRestClientConfiguration();
-        private string roomName;
+        private readonly string roomName;
+
+        private readonly ImageManager imageManager;
+
+        private readonly Object runningLock = new Object();
+        private bool running;
 
         private TfsTeamRoomRestClient restClient;
         private TfsTeamRoom room;
-        private TfsTeamRoomMessage lastMessage;
+        private DateTime lastMessageTime;
         private int hwm;
 
-        private Dictionary<Guid, string> userNames = new Dictionary<Guid, string>();
+        private readonly Dictionary<Guid, string> userNames = new Dictionary<Guid, string>();
 
         public TfsClient(ConfigurationDictionary configuration)
         {
@@ -36,6 +44,8 @@ namespace Summoner.Clients
             restConfiguration.Username = configuration["username"];
             restConfiguration.Password = configuration["password"];
             roomName = configuration["room"];
+
+            imageManager = new ImageManager(this);
         }
 
         public ConfigurationDictionary Configuration
@@ -46,10 +56,15 @@ namespace Summoner.Clients
             }
         }
 
-        public bool Connected
+        public bool Running
         {
-            get;
-            private set;
+            get
+            {
+                lock (runningLock)
+                {
+                    return running;
+                }
+            }
         }
 
         public string Name
@@ -70,97 +85,129 @@ namespace Summoner.Clients
             }
         }
 
-        public void Connect()
+        public void Start()
         {
-            if (Connected)
+            lock (runningLock)
             {
-                Close();
-            }
-
-            restClient = new TfsTeamRoomRestClient(restConfiguration);
-            room = null;
-
-            foreach (TfsTeamRoom r in restClient.Rooms())
-            {
-                if (roomName.Equals(r.Name))
+                if (running)
                 {
-                    room = r;
-                    break;
+                    Stop();
                 }
+
+                restClient = new TfsTeamRoomRestClient(restConfiguration);
+                room = null;
+
+                foreach (TfsTeamRoom r in restClient.Rooms())
+                {
+                    if (roomName.Equals(r.Name))
+                    {
+                        room = r;
+                        break;
+                    }
+                }
+
+                if (room == null)
+                {
+                    throw new Exception(String.Format("Could not find team room '{0}'", roomName));
+                }
+
+                /* Load the high-water mark */
+                IEnumerable<TfsTeamRoomMessage> messages = restClient.Messages(room);
+
+                TfsTeamRoomMessage lastMessage = (messages.Count() > 0) ? restClient.Messages(room).Last() : null;
+
+                lastMessageTime = (lastMessage != null) ? lastMessage.PostedTime : default(DateTime);
+                hwm = (lastMessage != null) ? lastMessage.Id : 0;
+
+                running = true;
             }
 
-            if (room == null)
+            new Thread(delegate()
             {
-                throw new Exception(String.Format("Could not find team room '{0}'", roomName));
-            }
-
-            /* Load the high-water mark */
-            lastMessage = restClient.Messages(room).Last();
-            DateTime filter = (lastMessage != null) ? lastMessage.PostedTime : default(DateTime);
-            hwm = (lastMessage != null) ? lastMessage.Id : 0;
-
-            Connected = true;
+                imageManager.Start();
+            }).Start();
         }
 
         private string ResolveUserId(Guid userTfId)
         {
-            if (!userNames.ContainsKey(userTfId))
+            lock (userNames)
             {
-                TfsUserProfileRestClient profileClient = new TfsUserProfileRestClient(restConfiguration);
-                TfsUserIdentity identity = profileClient.GetIdentity(userTfId.ToString());
+                if (!userNames.ContainsKey(userTfId))
+                {
+                    TfsUserProfileRestClient profileClient = new TfsUserProfileRestClient(restConfiguration);
+                    TfsUserIdentity identity = profileClient.GetIdentity(userTfId.ToString());
 
-                if (identity != null)
-                {
-                    userNames[userTfId] = identity.DisplayName;
+                    if (identity != null)
+                    {
+                        userNames[userTfId] = identity.DisplayName;
+                    }
+                    else
+                    {
+                        userNames[userTfId] = "Unknown user " + userTfId.ToString();
+                    }
                 }
-                else
-                {
-                    userNames[userTfId] = "Unknown user " + userTfId.ToString();
-                }
+
+                return userNames[userTfId];
             }
+        }
 
-            return userNames[userTfId];
+        private string ResolveUserImage(Guid userTfId)
+        {
+            string imageUrl = String.Format("{0}/_api/_common/IdentityImage?id={1}&__v=5",
+                configuration["uri"], userTfId.ToString());
+
+            return imageManager.GetImage(imageUrl);
         }
 
         public IEnumerable<Message> RecentMessages()
         {
-            if (!Connected)
+            lock (runningLock)
             {
-                throw new Exception("Not connected");
-            }
-
-            List<Message> messages = new List<Message>();
-            IEnumerable<TfsTeamRoomMessage> teamMessages = restClient.Messages(room, "PostedTime gt " + lastMessage.PostedTime.ToUniversalTime().ToString(RestSharp.DateFormat.Iso8601));
-
-            foreach (TfsTeamRoomMessage teamMessage in teamMessages)
-            {
-                lastMessage = teamMessage;
-
-                if (teamMessage.Id <= hwm)
+                if (!running)
                 {
-                    continue;
+                    throw new Exception("Not connected");
                 }
 
-                hwm = teamMessage.Id;
+                List<Message> messages = new List<Message>();
+                IEnumerable<TfsTeamRoomMessage> teamMessages = restClient.Messages(room, "PostedTime gt " + lastMessageTime.ToUniversalTime().ToString(RestSharp.DateFormat.Iso8601));
 
-                messages.Add(new Message() {
-                    Sender = ResolveUserId(teamMessage.PostedByUserTfid),
-                    Time = teamMessage.PostedTime,
-                    Content = teamMessage.Content
-                });
+                foreach (TfsTeamRoomMessage teamMessage in teamMessages)
+                {
+                    lastMessageTime = teamMessage.PostedTime;
+
+                    if (teamMessage.Id <= hwm)
+                    {
+                        continue;
+                    }
+
+                    hwm = teamMessage.Id;
+
+                    messages.Add(new Message()
+                    {
+                        Sender = ResolveUserId(teamMessage.PostedByUserTfid),
+                        SenderImage = ResolveUserImage(teamMessage.PostedByUserTfid),
+                        Time = teamMessage.PostedTime,
+                        Content = teamMessage.Content
+                    });
+                }
+
+                return messages;
             }
-
-            return messages;
         }
 
-        public void Close()
+        public void Stop()
         {
-            restClient = null;
-            room = null;
-            lastMessage = null;
-            hwm = 0;
+            lock (runningLock)
+            {
+                restClient = null;
+                room = null;
+                lastMessageTime = default(DateTime);
+                hwm = 0;
 
-            Connected = false;
+                running = false;
+            }
+
+            imageManager.Stop();
         }
     }
 }

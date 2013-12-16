@@ -51,7 +51,8 @@ namespace Summoner.Rest.Tfs
                 request.AddParameter("$filter", filter);
             }
 
-            return Execute<TfsTeamMessageList>(request).Value;
+            TfsTeamMessageList messages = Execute<TfsTeamMessageList>(request);
+            return (messages != null) ? messages.Value : null;
         }
 
         public void Leave(TfsTeamRoom room)
