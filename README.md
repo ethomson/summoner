@@ -1,4 +1,4 @@
-summoner
+Summon̈er
 ========
 
 A simple Windows application to notify you of mentions in chat rooms
@@ -6,7 +6,7 @@ like Campfire or TFS Team Rooms, so that you will never miss an
 important conversation just because you had your browser closed.
 It can also make you look omniscient, eerily spooking your coworkers.
 
-Summoner scans chat rooms ("clients") for keywords and then fires
+Summon̈er scans chat rooms ("clients") for keywords and then fires
 notifications when it sees them.
 
 Clients
